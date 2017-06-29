@@ -17,6 +17,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -51,6 +52,8 @@ import org.jsoup.nodes.Document;
  */
 public class Main {
     private static Properties config = new Properties();
+    private static String username;
+    private static String password;
     public static void main(String[] args) {
         Logger logger = Logger.getLogger(Main.class.getName());
         
@@ -67,7 +70,18 @@ public class Main {
                 writer.close();
                 System.out.println("No config file detected. Please edit the config.properties files and provide proper parameters.");
             } else {
+                
                 config.load(new FileInputStream("config.properties"));
+                if (config.containsKey("username") && config.containsKey("password")) {
+                    username = config.getProperty("username");
+                    password = config.getProperty("password");
+                } else {
+                    System.out.print("Enter username: ");
+                    Scanner sc = new Scanner(System.in);
+                    username = sc.nextLine();
+                    System.out.print("Enter password: ");
+                    password = sc.nextLine();
+                }
                 FileHandler handler = new FileHandler(config.getProperty("destination") + "/error.log"); 
                 logger.addHandler(handler);
                 HttpClientFactory.setRetryCount(Integer.valueOf(config.getProperty("retry_count")));
@@ -88,8 +102,8 @@ public class Main {
         HttpContext httpContext = new BasicHttpContext();
         httpContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
         List<NameValuePair> postValue = new ArrayList();
-        postValue.add(new BasicNameValuePair("username", config.getProperty("username")));
-        postValue.add(new BasicNameValuePair("password", config.getProperty("password")));
+        postValue.add(new BasicNameValuePair("username", username));
+        postValue.add(new BasicNameValuePair("password", password));
         loginPost.setEntity(new UrlEncodedFormEntity(postValue));
         HttpResponse loginResponse = httpclient.execute(loginPost, httpContext);
         HttpEntity httpEntity = loginResponse.getEntity();

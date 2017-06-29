@@ -48,7 +48,7 @@ public class HttpClientFactory {
             public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
                 System.err.println("Retry count: " + executionCount);
                 //System.err.println(exception.getMessage());
-                if (retryCount != -1 || executionCount > retryCount) {
+                if (retryCount != -1 && executionCount > retryCount) {
                     System.err.println("Exceeded maximum retry count. Aborting.");
                     return false;
                 }

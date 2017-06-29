@@ -65,15 +65,17 @@ public class Main {
                     writer.println(str);
                 }
                 writer.close();
+                System.out.println("No config file detected. Please edit the config.properties files and provide proper parameters.");
+            } else {
+                config.load(new FileInputStream("config.properties"));
+                FileHandler handler = new FileHandler(config.getProperty("destination") + "/error.log"); 
+                logger.addHandler(handler);
+                HttpClientFactory.setRetryCount(Integer.valueOf(config.getProperty("retry_count")));
+                HttpClientFactory.setTimeout(Integer.valueOf(config.getProperty("timeout")));
+                HttpContext httpContext = login();
+                Search defaultSearch = new Search(config, httpContext);
+                defaultSearch.execute();
             }
-            config.load(new FileInputStream("config.properties"));
-            FileHandler handler = new FileHandler(config.getProperty("destination") + "/error.log"); 
-            logger.addHandler(handler);
-            HttpClientFactory.setRetryCount(Integer.valueOf(config.getProperty("retry_count")));
-            HttpClientFactory.setTimeout(Integer.valueOf(config.getProperty("timeout")));
-            HttpContext httpContext = login();
-            Search defaultSearch = new Search(config, httpContext);
-            defaultSearch.execute();      
         } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException | IOException | ParseException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }

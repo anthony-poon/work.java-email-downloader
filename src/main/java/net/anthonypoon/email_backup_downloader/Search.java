@@ -51,8 +51,8 @@ import org.jsoup.select.Elements;
 public class Search {
     private String url = "";
     private int page = 0;
-    private String sort = "date";
-    private String order = "1";
+    private String sort = "1";
+    private String order = "date";
     private String type = "search";
     private String search = "";
     private String searchType = "expert";
@@ -137,10 +137,10 @@ public class Search {
             String str;
             String html = "";
             while ((str = br.readLine()) != null) {
-                html = html + str;
+                html = html + "\n" + str;
             }
             Document doc = Jsoup.parse(html);
-            //System.out.println(html);
+            System.out.println(html);
             allElements = doc.getElementsByClass("resultrow new");
             long totalByte = 0;
             for (Element element : allElements) {
@@ -157,7 +157,9 @@ public class Search {
             float secondElapsed = (endTime - startTime) / 1000;
             System.out.println("Download rate: " + allElements.size() / secondElapsed + " email per secound");
             System.out.println("Download rate: " + (totalByte / 1024) / secondElapsed + " KB per secound");
-            page = page + 1;
+            if (allElements.size() > 0) {
+                page = page + 1;
+            }            
             saveFile.setProperty("page", String.valueOf(page));
             saveFile.store(new FileWriter(saveLocation), null);
         } while (allElements.size() > 0);

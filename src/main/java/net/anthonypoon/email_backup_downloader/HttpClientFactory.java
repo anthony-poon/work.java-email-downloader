@@ -41,7 +41,7 @@ public class HttpClientFactory {
     private static int timeout = 5000;
     public static HttpClient getInstance() throws NoSuchAlgorithmException, KeyManagementException, KeyStoreException {
         // Set connection timeout
-        RequestConfig config = RequestConfig.custom().setConnectTimeout(timeout).setSocketTimeout(timeout).build();
+        RequestConfig config = RequestConfig.custom().setConnectTimeout(timeout).setSocketTimeout(timeout).setConnectionRequestTimeout(timeout).build();
         
         HttpRequestRetryHandler retryHandler = new HttpRequestRetryHandler() {
             @Override

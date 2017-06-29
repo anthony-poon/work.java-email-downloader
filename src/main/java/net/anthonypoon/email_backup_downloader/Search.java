@@ -79,7 +79,6 @@ public class Search {
         }
         this.url = config.getProperty("website.search_url");
         this.httpContext = httpContext;
-        client = HttpClientFactory.getInstance();
     }
     
     public void setPage(int page) {
@@ -117,6 +116,7 @@ public class Search {
     public void execute() throws IOException, ParseException, NoSuchAlgorithmException, KeyManagementException, KeyStoreException {
         Elements allElements;
         do {
+            client = HttpClientFactory.getInstance();
             long startTime = System.currentTimeMillis();
             System.out.println("Getting page " + page + " data");
             HttpPost post = new HttpPost(url);

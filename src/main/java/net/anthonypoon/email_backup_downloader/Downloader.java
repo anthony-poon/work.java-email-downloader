@@ -27,8 +27,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.http.HttpEntity;
@@ -65,7 +63,6 @@ public class Downloader {
     
     public long execute(String filePath) throws IOException, ParseException {
         HttpGet get = new HttpGet(url);
-        System.out.println(url);
         HttpResponse downloadResponse = httpClient.execute(get, httpContext);
         HttpEntity httpEntity = downloadResponse.getEntity();
         PrintStream out = new PrintStream(new File(filePath));

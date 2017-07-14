@@ -26,6 +26,8 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -55,7 +57,7 @@ public class Search {
     private String order = "date";
     private String type = "search";
     private String search = "";
-    private String searchType = "expert";
+    private String searchType = "simple";
     private String ref = "";
     private String folders = "";
     private String extraFolders = "";    
@@ -64,16 +66,21 @@ public class Search {
     private Properties config;
     private Properties saveFile;
     private String saveLocation;
-    public Search(Properties config, HttpContext httpContext) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException {
+    private LocalDate date;
+    private DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+    public Search(Properties config, HttpContext httpContext) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException, ParseException {
         this.config = config;
         this.saveLocation = config.getProperty("destination") + "/" + "last_run.save";
         saveFile = new Properties();
         try {
             saveFile.load(new FileInputStream(saveLocation));
             page = Integer.valueOf(saveFile.getProperty("page"));
+            date = LocalDate.parse(saveFile.getProperty("date"), df);
         } catch (FileNotFoundException ex) {
+            date = LocalDate.parse(config.getProperty("start_date"),df);
             saveFile.setProperty("page", "0");
-            saveFile.store(new FileWriter(saveLocation), null);
+            saveFile.setProperty("date", config.getProperty("start_date"));
+            saveFile.store(new FileWriter(saveLocation), null);            
         } catch (IOException ex) {
             Logger.getLogger(Search.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -116,53 +123,64 @@ public class Search {
     public void execute() throws IOException, ParseException, NoSuchAlgorithmException, KeyManagementException, KeyStoreException {
         Elements allElements;
         do {
-            client = HttpClientFactory.getInstance();
-            long startTime = System.currentTimeMillis();
-            System.out.println("Getting page " + page + " data");
-            HttpPost post = new HttpPost(url);
-            List<NameValuePair> postValue = new ArrayList();
-            postValue.add(new BasicNameValuePair("page", String.valueOf(page)));
-            postValue.add(new BasicNameValuePair("sort", sort));
-            postValue.add(new BasicNameValuePair("order", order));
-            postValue.add(new BasicNameValuePair("type", type));
-            postValue.add(new BasicNameValuePair("search", search));
-            postValue.add(new BasicNameValuePair("searchtype", searchType));
-            postValue.add(new BasicNameValuePair("ref", ref));
-            postValue.add(new BasicNameValuePair("folders", folders));
-            postValue.add(new BasicNameValuePair("extra_folders", extraFolders));
-            post.setEntity(new UrlEncodedFormEntity(postValue));
-            HttpResponse response = client.execute(post, httpContext);
-            HttpEntity httpEntity = response.getEntity();
-            BufferedReader br = new BufferedReader(new InputStreamReader(httpEntity.getContent()));
-            String str;
-            String html = "";
-            while ((str = br.readLine()) != null) {
-                html = html + "\n" + str;
-            }
-            Document doc = Jsoup.parse(html);
-            System.out.println(html);
-            allElements = doc.getElementsByClass("resultrow new");
-            long totalByte = 0;
-            for (Element element : allElements) {
-                Downloader dl = new Downloader(config, httpContext, element.id());
-                Element dateElement = element.getElementsByClass("resultcell date").first();
-                String folderPath = config.getProperty("destination") + "/" + dateElement.html().substring(0, 7);
-                File folder = new File(folderPath);
-                if (!folder.exists()) {
-                    folder.mkdir();
+            System.out.println("Downloading email from " + date.format(df));
+            do {
+                client = HttpClientFactory.getInstance();
+                long startTime = System.currentTimeMillis();
+                System.out.println("Getting page " + page + " data");
+                HttpPost post = new HttpPost(url);
+                List<NameValuePair> postValue = new ArrayList();
+                postValue.add(new BasicNameValuePair("page", String.valueOf(page)));
+                postValue.add(new BasicNameValuePair("sort", sort));
+                postValue.add(new BasicNameValuePair("order", order));
+                postValue.add(new BasicNameValuePair("type", type));
+                postValue.add(new BasicNameValuePair("search", search));
+                postValue.add(new BasicNameValuePair("searchtype", searchType));
+                postValue.add(new BasicNameValuePair("ref", ref));
+                postValue.add(new BasicNameValuePair("folders", folders));
+                postValue.add(new BasicNameValuePair("extra_folders", extraFolders));
+                postValue.add(new BasicNameValuePair("date1", date.format(df)));
+                postValue.add(new BasicNameValuePair("date2", date.format(df)));
+                post.setEntity(new UrlEncodedFormEntity(postValue));
+                HttpResponse response = client.execute(post, httpContext);
+                HttpEntity httpEntity = response.getEntity();
+                BufferedReader br = new BufferedReader(new InputStreamReader(httpEntity.getContent()));
+                String str;
+                String html = "";
+                while ((str = br.readLine()) != null) {
+                    html = html + "\n" + str;
                 }
-                totalByte = totalByte + dl.execute(folderPath + "/" + element.id() + ".eml");
-            }
-            long endTime = System.currentTimeMillis();
-            float secondElapsed = (endTime - startTime) / 1000;
-            System.out.println("Download rate: " + allElements.size() / secondElapsed + " email per secound");
-            System.out.println("Download rate: " + (totalByte / 1024) / secondElapsed + " KB per secound");
-            if (allElements.size() > 0) {
-                page = page + 1;
-            }            
+                Document doc = Jsoup.parse(html);
+                //System.out.println(html);
+                allElements = doc.getElementsByClass("resultrow new");
+                long totalByte = 0;
+                for (Element element : allElements) {
+                    Downloader dl = new Downloader(config, httpContext, element.id());
+                    Element dateElement = element.getElementsByClass("resultcell date").first();
+                    String folderPath = config.getProperty("destination") + "/" + dateElement.html().substring(0, 7);
+                    File folder = new File(folderPath);
+                    if (!folder.exists()) {
+                        folder.mkdir();
+                    }
+                    totalByte = totalByte + dl.execute(folderPath + "/" + element.id() + ".eml");
+                }                
+                if (allElements.size() > 0) {
+                    long endTime = System.currentTimeMillis();
+                    float secondElapsed = (endTime - startTime) / 1000;
+                    System.out.println("Download rate: " + allElements.size() / secondElapsed + " email per secound");
+                    System.out.println("Download rate: " + (totalByte / 1024) / secondElapsed + " KB per secound");
+                    page = page + 1;
+                }            
+                saveFile.setProperty("page", String.valueOf(page));
+                saveFile.setProperty("date", date.format(df));
+                saveFile.store(new FileWriter(saveLocation), null);
+            } while (allElements.size() > 0);
+            page = 0;
+            date = date.plusDays(1);
             saveFile.setProperty("page", String.valueOf(page));
+            saveFile.setProperty("date", date.format(df));
             saveFile.store(new FileWriter(saveLocation), null);
-        } while (allElements.size() > 0);
+        } while (date.isBefore(LocalDate.now()));
         //System.out.println(html);
     }
 
